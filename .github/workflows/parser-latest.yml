@@ -1,0 +1,41 @@
+name: Parser (latest)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: s2-pipeline-db
+  cancel-in-progress: false
+
+jobs:
+  parse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r worker/requirements.txt
+
+      - name: Apply DB migrations
+        env:
+          SHOTIBLOF_GITHUB_TOKEN: ${{ secrets.SHOTIBLOF_GITHUB_TOKEN }}
+          PIPELINE_DB_GITHUB_REPO: shotiblof/s2-pipeline-db
+          PIPELINE_DB_LOCAL_DIR: /tmp/s2-pipeline-db
+        working-directory: worker
+        run: python apply_s2_migrations.py
+
+      - name: Run strip2 parser (latest)
+        env:
+          SHOTIBLOF_GITHUB_TOKEN: ${{ secrets.SHOTIBLOF_GITHUB_TOKEN }}
+          PIPELINE_DB_GITHUB_REPO: shotiblof/s2-pipeline-db
+          PIPELINE_DB_LOCAL_DIR: /tmp/s2-pipeline-db
+          PARSER_MODE: latest
+          PARSER_MAX_PARSED_QUEUE: "120"
+          PIPELINE_PROFILE: turbo
+        working-directory: worker
+        run: python run_s2_parser.py
